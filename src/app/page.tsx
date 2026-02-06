@@ -1,10 +1,27 @@
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
+import { ThemeToggle } from '@/components/ui/theme-toggle';
 import { FileText, Users, Wifi, Cloud } from 'lucide-react';
 
 export default function Home() {
   return (
     <main className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 dark:from-gray-900 dark:via-gray-900 dark:to-gray-950">
+      {/* Navigation */}
+      <nav className="border-b border-gray-200 dark:border-gray-800 bg-white/50 dark:bg-gray-900/50 backdrop-blur-lg sticky top-0 z-50">
+        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
+          <Link href="/" className="flex items-center gap-2">
+            <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg" />
+            <span className="text-xl font-bold gradient-text">SyncState</span>
+          </Link>
+          <div className="flex items-center gap-4">
+            <ThemeToggle />
+            <Link href="/dashboard">
+              <Button>Dashboard</Button>
+            </Link>
+          </div>
+        </div>
+      </nav>
+
       {/* Hero Section */}
       <div className="container mx-auto px-4 py-20">
         <div className="max-w-4xl mx-auto text-center">

@@ -5,6 +5,8 @@ import { useUser } from '@clerk/nextjs';
 import { Plus, FileText } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
+import { ThemeToggle } from '@/components/ui/theme-toggle';
 import { DocumentCard } from '@/components/dashboard/DocumentCard';
 import { getDocuments, createDocument, deleteDocument } from '@/lib/supabase/documents';
 import type { Document } from '@/types';
@@ -76,30 +78,32 @@ export default function DashboardPage() {
       <div className="container mx-auto px-4 py-8">
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-500 to-purple-600 bg-clip-text text-transparent">
+            <h1 className="text-4xl font-bold gradient-text">
               My Documents
             </h1>
             <p className="text-gray-600 dark:text-gray-400 mt-2">
               Create and manage your collaborative documents
             </p>
           </div>
-          <Button
-            onClick={handleCreateDocument}
-            disabled={isCreating}
-            size="lg"
-          >
-            <Plus className="w-5 h-5 mr-2" />
-            New Document
-          </Button>
+          <div className="flex items-center gap-4">
+            <ThemeToggle />
+            <Button
+              onClick={handleCreateDocument}
+              disabled={isCreating}
+              size="lg"
+            >
+              <Plus className="w-5 h-5 mr-2" />
+              New Document
+            </Button>
+          </div>
         </div>
 
         {isLoading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {[1, 2, 3].map((i) => (
-              <div
-                key={i}
-                className="h-32 bg-gray-200 dark:bg-gray-800 rounded-lg animate-pulse"
-              />
+            {[1, 2, 3, 4, 5, 6].map((i) => (
+              <div key={i} className="space-y-3">
+                <Skeleton className="h-24 w-full" />
+              </div>
             ))}
           </div>
         ) : documents.length === 0 ? (
