@@ -5,6 +5,8 @@ import { useParams, useRouter } from 'next/navigation';
 import { useUser } from '@clerk/nextjs';
 import { ArrowLeft, Save, GitBranch } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useKeyboardShortcuts, getEditorShortcuts } from '@/hooks/useKeyboardShortcuts';
+import { KeyboardShortcutsModal, KeyboardShortcutsTrigger } from '@/components/ui/keyboard-shortcuts-modal';
 import { CollaborativeEditor } from '@/components/editor/CollaborativeEditor';
 import { EditorToolbar } from '@/components/editor/EditorToolbar';
 import { ActiveUsers } from '@/components/editor/ActiveUsers';
@@ -30,6 +32,7 @@ export default function EditorPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [title, setTitle] = useState('');
+  const [showShortcuts, setShowShortcuts] = useState(false);
 
   const { providers, isReady } = useYjsDocument(documentId);
   const presences = usePresence(
@@ -66,6 +69,18 @@ export default function EditorPage() {
       },
     },
   });
+
+  // Register keyboard shortcuts
+  const editorShortcuts = getEditorShortcuts(editor);
+  useKeyboardShortcuts([
+    ...editorShortcuts,
+    {
+      key: '?',
+      shift: true,
+      description: 'Show keyboard shortcuts',
+      action: () => setShowShortcuts(true),
+    },
+  ]);
 
   useEffect(() => {
     if (documentId) {
@@ -132,6 +147,7 @@ export default function EditorPage() {
                 variant="ghost"
                 size="icon"
                 onClick={() => router.push('/dashboard')}
+                aria-label="Back to dashboard"
               >
                 <ArrowLeft className="w-5 h-5" />
               </Button>
@@ -142,6 +158,7 @@ export default function EditorPage() {
                 onBlur={handleSaveTitle}
                 className="text-2xl font-bold bg-transparent border-none focus:outline-none focus:ring-2 focus:ring-blue-500 rounded px-2"
                 placeholder="Untitled Document"
+                aria-label="Document title"
               />
               {isSaving && (
                 <span className="text-sm text-gray-500">Saving...</span>
@@ -149,11 +166,13 @@ export default function EditorPage() {
             </div>
 
             <div className="flex items-center gap-4">
+              <KeyboardShortcutsTrigger onClick={() => setShowShortcuts(true)} />
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => router.push(`/visualization/${documentId}`)}
                 className="flex items-center gap-2"
+                aria-label="View 3D version tree visualization"
               >
                 <GitBranch className="w-4 h-4" />
                 3D Version Tree
@@ -183,6 +202,13 @@ export default function EditorPage() {
           </div>
         </div>
       )}
+
+      {/* Keyboard Shortcuts Modal */}
+      <KeyboardShortcutsModal
+        shortcuts={editorShortcuts}
+        isOpen={showShortcuts}
+        onClose={() => setShowShortcuts(false)}
+      />
     </div>
   );
 }

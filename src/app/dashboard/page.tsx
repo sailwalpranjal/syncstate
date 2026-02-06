@@ -9,6 +9,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
 import { DocumentCard } from '@/components/dashboard/DocumentCard';
 import { getDocuments, createDocument, deleteDocument } from '@/lib/supabase/documents';
+import { useKeyboardShortcuts, getDashboardShortcuts } from '@/hooks/useKeyboardShortcuts';
+import { KeyboardShortcutsModal, KeyboardShortcutsTrigger } from '@/components/ui/keyboard-shortcuts-modal';
 import type { Document } from '@/types';
 
 export default function DashboardPage() {
@@ -16,6 +18,19 @@ export default function DashboardPage() {
   const [documents, setDocuments] = useState<Document[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isCreating, setIsCreating] = useState(false);
+  const [showShortcuts, setShowShortcuts] = useState(false);
+
+  // Register keyboard shortcuts
+  const dashboardShortcuts = getDashboardShortcuts(handleCreateDocument);
+  useKeyboardShortcuts([
+    ...dashboardShortcuts,
+    {
+      key: '?',
+      shift: true,
+      description: 'Show keyboard shortcuts',
+      action: () => setShowShortcuts(true),
+    },
+  ]);
 
   useEffect(() => {
     if (user) {
@@ -86,11 +101,13 @@ export default function DashboardPage() {
             </p>
           </div>
           <div className="flex items-center gap-4">
+            <KeyboardShortcutsTrigger onClick={() => setShowShortcuts(true)} />
             <ThemeToggle />
             <Button
               onClick={handleCreateDocument}
               disabled={isCreating}
               size="lg"
+              aria-label="Create new document"
             >
               <Plus className="w-5 h-5 mr-2" />
               New Document
@@ -115,7 +132,11 @@ export default function DashboardPage() {
             <p className="text-gray-500 dark:text-gray-400 mb-6">
               Get started by creating your first document
             </p>
-            <Button onClick={handleCreateDocument} disabled={isCreating}>
+            <Button
+              onClick={handleCreateDocument}
+              disabled={isCreating}
+              aria-label="Create your first document"
+            >
               <Plus className="w-5 h-5 mr-2" />
               Create Document
             </Button>
@@ -132,6 +153,13 @@ export default function DashboardPage() {
           </div>
         )}
       </div>
+
+      {/* Keyboard Shortcuts Modal */}
+      <KeyboardShortcutsModal
+        shortcuts={dashboardShortcuts}
+        isOpen={showShortcuts}
+        onClose={() => setShowShortcuts(false)}
+      />
     </div>
   );
 }
