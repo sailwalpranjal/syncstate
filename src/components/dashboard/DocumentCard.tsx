@@ -1,7 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import { FileText, Trash2 } from 'lucide-react';
+import { FileText, Trash2, GitBranch } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -13,6 +14,8 @@ interface DocumentCardProps {
 }
 
 export function DocumentCard({ document, onDelete }: DocumentCardProps) {
+  const router = useRouter();
+
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleDateString('en-US', {
@@ -42,21 +45,34 @@ export function DocumentCard({ document, onDelete }: DocumentCardProps) {
               )}
             </CardDescription>
           </Link>
-          {onDelete && (
+          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
             <Button
               variant="ghost"
               size="icon"
               onClick={(e) => {
                 e.preventDefault();
-                if (confirm('Are you sure you want to delete this document?')) {
-                  onDelete(document.id);
-                }
+                router.push(`/visualization/${document.id}`);
               }}
-              className="opacity-0 group-hover:opacity-100 transition-opacity"
+              title="View 3D Version Tree"
             >
-              <Trash2 className="w-4 h-4 text-red-500" />
+              <GitBranch className="w-4 h-4 text-purple-500" />
             </Button>
-          )}
+            {onDelete && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={(e) => {
+                  e.preventDefault();
+                  if (confirm('Are you sure you want to delete this document?')) {
+                    onDelete(document.id);
+                  }
+                }}
+                title="Delete Document"
+              >
+                <Trash2 className="w-4 h-4 text-red-500" />
+              </Button>
+            )}
+          </div>
         </div>
       </CardHeader>
     </Card>

@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useUser } from '@clerk/nextjs';
-import { ArrowLeft, Save } from 'lucide-react';
+import { ArrowLeft, Save, GitBranch } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { CollaborativeEditor } from '@/components/editor/CollaborativeEditor';
 import { EditorToolbar } from '@/components/editor/EditorToolbar';
@@ -149,6 +149,15 @@ export default function EditorPage() {
             </div>
 
             <div className="flex items-center gap-4">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => router.push(`/visualization/${documentId}`)}
+                className="flex items-center gap-2"
+              >
+                <GitBranch className="w-4 h-4" />
+                3D Version Tree
+              </Button>
               <ConnectionStatus status={connectionStatus} peerCount={peerCount} />
               <ActiveUsers presences={presences} currentUserId={user?.id || ''} />
             </div>
