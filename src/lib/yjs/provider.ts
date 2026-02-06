@@ -1,14 +1,16 @@
 import * as Y from 'yjs';
 import { WebrtcProvider } from 'y-webrtc';
+import { WebsocketProvider } from 'y-websocket';
 import { IndexeddbPersistence } from 'y-indexeddb';
 
 export interface YjsProviders {
   ydoc: Y.Doc;
   persistence: IndexeddbPersistence;
   webrtcProvider: WebrtcProvider;
+  websocketProvider?: WebsocketProvider;
 }
 
-export function initializeYjsDocument(documentId: string): YjsProviders {
+export function initializeYjsDocument(documentId: string, useWebSocket = false): YjsProviders {
   // Create Yjs document
   const ydoc = new Y.Doc();
 
@@ -22,15 +24,26 @@ export function initializeYjsDocument(documentId: string): YjsProviders {
     filterBcConns: true,
   });
 
+  // Optional: Set up WebSocket provider as fallback
+  let websocketProvider: WebsocketProvider | undefined;
+  if (useWebSocket) {
+    const wsUrl = process.env.NEXT_PUBLIC_YJS_WEBSOCKET_SERVER || 'wss://demos.yjs.dev';
+    websocketProvider = new WebsocketProvider(wsUrl, documentId, ydoc);
+  }
+
   return {
     ydoc,
     persistence,
     webrtcProvider,
+    websocketProvider,
   };
 }
 
 export function cleanupYjsDocument(providers: YjsProviders): void {
   providers.webrtcProvider.destroy();
+  if (providers.websocketProvider) {
+    providers.websocketProvider.destroy();
+  }
   providers.persistence.destroy();
   providers.ydoc.destroy();
 }

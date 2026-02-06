@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useUser } from '@clerk/nextjs';
 import { Plus, FileText } from 'lucide-react';
+import toast from 'react-hot-toast';
 import { Button } from '@/components/ui/button';
 import { DocumentCard } from '@/components/dashboard/DocumentCard';
 import { getDocuments, createDocument, deleteDocument } from '@/lib/supabase/documents';
@@ -24,8 +25,13 @@ export default function DashboardPage() {
     if (!user) return;
 
     setIsLoading(true);
-    const docs = await getDocuments(user.id);
-    setDocuments(docs);
+    try {
+      const docs = await getDocuments(user.id);
+      setDocuments(docs);
+    } catch (error) {
+      toast.error('Failed to load documents');
+      console.error(error);
+    }
     setIsLoading(false);
   };
 
@@ -33,20 +39,35 @@ export default function DashboardPage() {
     if (!user) return;
 
     setIsCreating(true);
-    const title = `Untitled Document ${new Date().toLocaleDateString()}`;
-    const newDoc = await createDocument(title, user.id);
+    try {
+      const title = `Untitled Document ${new Date().toLocaleDateString()}`;
+      const newDoc = await createDocument(title, user.id);
 
-    if (newDoc) {
-      setDocuments([newDoc, ...documents]);
+      if (newDoc) {
+        setDocuments([newDoc, ...documents]);
+        toast.success('Document created successfully');
+      } else {
+        toast.error('Failed to create document');
+      }
+    } catch (error) {
+      toast.error('Failed to create document');
+      console.error(error);
     }
-
     setIsCreating(false);
   };
 
   const handleDeleteDocument = async (id: string) => {
-    const success = await deleteDocument(id);
-    if (success) {
-      setDocuments(documents.filter((doc) => doc.id !== id));
+    try {
+      const success = await deleteDocument(id);
+      if (success) {
+        setDocuments(documents.filter((doc) => doc.id !== id));
+        toast.success('Document deleted');
+      } else {
+        toast.error('Failed to delete document');
+      }
+    } catch (error) {
+      toast.error('Failed to delete document');
+      console.error(error);
     }
   };
 
