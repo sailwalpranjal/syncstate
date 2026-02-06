@@ -26,6 +26,7 @@ export function CollaborativeEditor({
   onReady,
 }: CollaborativeEditorProps) {
   const editor = useEditor({
+    immediatelyRender: false,
     extensions: [
       StarterKit,
       Highlight.configure({
@@ -51,7 +52,7 @@ export function CollaborativeEditor({
     editorProps: {
       attributes: {
         class:
-          'prose prose-sm sm:prose lg:prose-lg xl:prose-2xl mx-auto focus:outline-none min-h-[calc(100vh-200px)] p-8',
+          'prose prose-sm sm:prose lg:prose-lg xl:prose-2xl mx-auto focus:outline-none min-h-[calc(100vh-200px)] p-8 text-white dark:text-white prose-headings:text-white prose-p:text-white',
       },
     },
     onUpdate: ({ editor }) => {
