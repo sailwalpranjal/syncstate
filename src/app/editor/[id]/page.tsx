@@ -3,24 +3,18 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useUser } from '@clerk/nextjs';
-import { ArrowLeft, Save, GitBranch } from 'lucide-react';
+import { ArrowLeft, GitBranch } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useKeyboardShortcuts, getEditorShortcuts } from '@/hooks/useKeyboardShortcuts';
+import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 import { KeyboardShortcutsModal, KeyboardShortcutsTrigger } from '@/components/ui/keyboard-shortcuts-modal';
 import { CollaborativeEditor } from '@/components/editor/CollaborativeEditor';
-import { EditorToolbar } from '@/components/editor/EditorToolbar';
 import { ActiveUsers } from '@/components/editor/ActiveUsers';
 import { ConnectionStatus } from '@/components/editor/ConnectionStatus';
 import { useYjsDocument } from '@/hooks/useYjsDocument';
 import { usePresence } from '@/hooks/usePresence';
 import { useCollaboration } from '@/hooks/useCollaboration';
 import { getDocumentById, updateDocument } from '@/lib/supabase/documents';
-import { generateUserColor } from '@/lib/yjs/awareness';
 import type { Document } from '@/types';
-import { useEditor } from '@tiptap/react';
-import StarterKit from '@tiptap/starter-kit';
-import Collaboration from '@tiptap/extension-collaboration';
-import CollaborationCursor from '@tiptap/extension-collaboration-cursor';
 
 export default function EditorPage() {
   const params = useParams();
@@ -44,36 +38,8 @@ export default function EditorPage() {
     providers?.webrtcProvider || null
   );
 
-  const editor = useEditor({
-    extensions: [
-      StarterKit,
-      providers?.ydoc
-        ? Collaboration.configure({
-            document: providers.ydoc,
-          })
-        : null,
-      providers?.webrtcProvider.awareness
-        ? CollaborationCursor.configure({
-            provider: providers.webrtcProvider.awareness as any,
-            user: {
-              name: user?.fullName || user?.firstName || 'Anonymous',
-              color: generateUserColor(user?.id || 'anonymous'),
-            },
-          })
-        : null,
-    ].filter(Boolean) as any[],
-    editorProps: {
-      attributes: {
-        class:
-          'prose prose-sm sm:prose lg:prose-lg xl:prose-2xl mx-auto focus:outline-none min-h-[calc(100vh-200px)] p-8',
-      },
-    },
-  });
-
   // Register keyboard shortcuts
-  const editorShortcuts = getEditorShortcuts(editor);
   useKeyboardShortcuts([
-    ...editorShortcuts,
     {
       key: '?',
       shift: true,
@@ -184,14 +150,17 @@ export default function EditorPage() {
         </div>
       </div>
 
-      {/* Toolbar */}
-      <EditorToolbar editor={editor} />
-
       {/* Editor */}
-      {isReady && editor ? (
-        <div className="container mx-auto">
-          {/* Editor content is rendered through the editor instance */}
-        </div>
+      {isReady && providers?.ydoc && providers?.webrtcProvider ? (
+        <CollaborativeEditor
+          ydoc={providers.ydoc}
+          awareness={providers.webrtcProvider.awareness}
+          userPresence={{
+            userId: user?.id || 'anonymous',
+            userName: user?.fullName || user?.firstName || 'Anonymous',
+            userColor: `hsl(${Math.random() * 360}, 70%, 50%)`,
+          }}
+        />
       ) : (
         <div className="flex items-center justify-center py-20">
           <div className="text-center">
@@ -205,7 +174,7 @@ export default function EditorPage() {
 
       {/* Keyboard Shortcuts Modal */}
       <KeyboardShortcutsModal
-        shortcuts={editorShortcuts}
+        shortcuts={[]}
         isOpen={showShortcuts}
         onClose={() => setShowShortcuts(false)}
       />
