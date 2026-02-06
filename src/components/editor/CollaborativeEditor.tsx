@@ -5,9 +5,12 @@ import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Collaboration from '@tiptap/extension-collaboration';
 import CollaborationCursor from '@tiptap/extension-collaboration-cursor';
+import Highlight from '@tiptap/extension-highlight';
+import Link from '@tiptap/extension-link';
 import * as Y from 'yjs';
 import { Awareness } from 'y-protocols/awareness';
 import type { UserPresence } from '@/types';
+import { FloatingToolbar } from './FloatingToolbar';
 
 interface CollaborativeEditorProps {
   ydoc: Y.Doc;
@@ -25,6 +28,15 @@ export function CollaborativeEditor({
   const editor = useEditor({
     extensions: [
       StarterKit,
+      Highlight.configure({
+        multicolor: true,
+      }),
+      Link.configure({
+        openOnClick: false,
+        HTMLAttributes: {
+          class: 'text-blue-500 underline hover:text-blue-600 cursor-pointer',
+        },
+      }),
       Collaboration.configure({
         document: ydoc,
       }),
@@ -56,6 +68,7 @@ export function CollaborativeEditor({
 
   return (
     <div className="w-full max-w-5xl mx-auto">
+      <FloatingToolbar editor={editor} />
       <EditorContent editor={editor} />
     </div>
   );
