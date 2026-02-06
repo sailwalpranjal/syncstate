@@ -2,6 +2,26 @@
 
 An offline-first collaborative document editor powered by CRDTs (Conflict-free Replicated Data Types). Write together in real-time, even when offline.
 
+## 🚀 Quick Start
+
+**Want to get started immediately?** Follow our detailed **[SETUP.md](./SETUP.md)** guide!
+
+```bash
+# 1. Install dependencies
+npm install --legacy-peer-deps
+
+# 2. Set up your .env.local with Supabase and Clerk keys
+# See SETUP.md for detailed instructions
+
+# 3. Run the Supabase schema
+# Copy supabase-schema.sql into Supabase SQL Editor and run
+
+# 4. Start the dev server
+npm run dev
+```
+
+Then visit `http://localhost:3000` and start collaborating!
+
 ## Features
 
 - **Real-Time Collaboration**: See edits and cursors from other users instantly
