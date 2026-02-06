@@ -20,24 +20,6 @@ export default function DashboardPage() {
   const [isCreating, setIsCreating] = useState(false);
   const [showShortcuts, setShowShortcuts] = useState(false);
 
-  // Register keyboard shortcuts
-  const dashboardShortcuts = getDashboardShortcuts(handleCreateDocument);
-  useKeyboardShortcuts([
-    ...dashboardShortcuts,
-    {
-      key: '?',
-      shift: true,
-      description: 'Show keyboard shortcuts',
-      action: () => setShowShortcuts(true),
-    },
-  ]);
-
-  useEffect(() => {
-    if (user) {
-      loadDocuments();
-    }
-  }, [user]);
-
   const loadDocuments = async () => {
     if (!user) return;
 
@@ -87,6 +69,24 @@ export default function DashboardPage() {
       console.error(error);
     }
   };
+
+  // Register keyboard shortcuts (after functions are defined)
+  const dashboardShortcuts = getDashboardShortcuts(handleCreateDocument);
+  useKeyboardShortcuts([
+    ...dashboardShortcuts,
+    {
+      key: '?',
+      shift: true,
+      description: 'Show keyboard shortcuts',
+      action: () => setShowShortcuts(true),
+    },
+  ]);
+
+  useEffect(() => {
+    if (user) {
+      loadDocuments();
+    }
+  }, [user]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-950">
