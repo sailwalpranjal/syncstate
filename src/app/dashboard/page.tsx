@@ -1,0 +1,112 @@
+'use client';
+
+import { useEffect, useState } from 'react';
+import { useUser } from '@clerk/nextjs';
+import { Plus, FileText } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { DocumentCard } from '@/components/dashboard/DocumentCard';
+import { getDocuments, createDocument, deleteDocument } from '@/lib/supabase/documents';
+import type { Document } from '@/types';
+
+export default function DashboardPage() {
+  const { user } = useUser();
+  const [documents, setDocuments] = useState<Document[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isCreating, setIsCreating] = useState(false);
+
+  useEffect(() => {
+    if (user) {
+      loadDocuments();
+    }
+  }, [user]);
+
+  const loadDocuments = async () => {
+    if (!user) return;
+
+    setIsLoading(true);
+    const docs = await getDocuments(user.id);
+    setDocuments(docs);
+    setIsLoading(false);
+  };
+
+  const handleCreateDocument = async () => {
+    if (!user) return;
+
+    setIsCreating(true);
+    const title = `Untitled Document ${new Date().toLocaleDateString()}`;
+    const newDoc = await createDocument(title, user.id);
+
+    if (newDoc) {
+      setDocuments([newDoc, ...documents]);
+    }
+
+    setIsCreating(false);
+  };
+
+  const handleDeleteDocument = async (id: string) => {
+    const success = await deleteDocument(id);
+    if (success) {
+      setDocuments(documents.filter((doc) => doc.id !== id));
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-950">
+      <div className="container mx-auto px-4 py-8">
+        <div className="flex items-center justify-between mb-8">
+          <div>
+            <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-500 to-purple-600 bg-clip-text text-transparent">
+              My Documents
+            </h1>
+            <p className="text-gray-600 dark:text-gray-400 mt-2">
+              Create and manage your collaborative documents
+            </p>
+          </div>
+          <Button
+            onClick={handleCreateDocument}
+            disabled={isCreating}
+            size="lg"
+          >
+            <Plus className="w-5 h-5 mr-2" />
+            New Document
+          </Button>
+        </div>
+
+        {isLoading ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {[1, 2, 3].map((i) => (
+              <div
+                key={i}
+                className="h-32 bg-gray-200 dark:bg-gray-800 rounded-lg animate-pulse"
+              />
+            ))}
+          </div>
+        ) : documents.length === 0 ? (
+          <div className="text-center py-20">
+            <FileText className="w-16 h-16 mx-auto text-gray-300 dark:text-gray-700 mb-4" />
+            <h2 className="text-2xl font-semibold text-gray-700 dark:text-gray-300 mb-2">
+              No documents yet
+            </h2>
+            <p className="text-gray-500 dark:text-gray-400 mb-6">
+              Get started by creating your first document
+            </p>
+            <Button onClick={handleCreateDocument} disabled={isCreating}>
+              <Plus className="w-5 h-5 mr-2" />
+              Create Document
+            </Button>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {documents.map((doc) => (
+              <DocumentCard
+                key={doc.id}
+                document={doc}
+                onDelete={handleDeleteDocument}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
