@@ -28,20 +28,38 @@ export default function VisualizationPage() {
   const [documentTitle, setDocumentTitle] = useState('Document Versions');
 
   useEffect(() => {
-    // TODO: Fetch document metadata and version history from Supabase
-    // For now, using demo data
-    setDocumentTitle(`Document ${documentId.slice(0, 8)} - Version History`);
+    const fetchData = async () => {
+      // Fetch document metadata
+      const { supabase } = await import('@/lib/supabase/client');
+      const { data: docData } = await supabase
+        .from('documents')
+        .select('title')
+        .eq('id', documentId)
+        .single();
 
-    // In production, this would fetch real version data from Yjs/Supabase
-    // const fetchVersions = async () => {
-    //   const { data } = await supabase
-    //     .from('document_versions')
-    //     .select('*')
-    //     .eq('document_id', documentId)
-    //     .order('created_at', { ascending: true });
-    //   setVersions(data || []);
-    // };
-    // fetchVersions();
+      if (docData) {
+        setDocumentTitle(`${docData.title} - Version History`);
+      } else {
+        setDocumentTitle(`Document - Version History`);
+      }
+
+      // Fetch version history from Supabase
+      const { getDocumentVersions } = await import('@/lib/yjs/versions');
+      const versionData = await getDocumentVersions(documentId);
+
+      // Convert to VersionNode format for 3D visualization
+      const nodes: VersionNode[] = versionData.map((v) => ({
+        id: v.id,
+        timestamp: v.timestamp,
+        author: v.author,
+        message: v.message,
+        parentId: v.parentId,
+      }));
+
+      setVersions(nodes);
+    };
+
+    fetchData();
   }, [documentId]);
 
   return (
@@ -91,6 +109,21 @@ export default function VisualizationPage() {
           <span className="font-semibold">Geodesic Paths</span> visualize version relationships in 3D space
         </div>
       </div>
+
+      {/* Setup Notice - Show when no versions exist */}
+      {versions.length === 0 && (
+        <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 z-10 max-w-lg">
+          <div className="bg-blue-500/20 backdrop-blur-md border border-blue-400/30 rounded-lg px-6 py-4 text-white">
+            <p className="text-sm font-semibold mb-2">📊 No Versions Yet</p>
+            <p className="text-xs text-gray-200">
+              Start creating versions by editing your document. Versions are automatically saved every 5 minutes while you work.
+            </p>
+            <p className="text-xs text-gray-200 mt-2">
+              💡 <strong>Tip:</strong> Make some changes to your document and wait 5 minutes, or edit the document multiple times over time to see the version tree appear here.
+            </p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

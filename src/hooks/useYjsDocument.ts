@@ -8,20 +8,41 @@ export function useYjsDocument(documentId: string | null) {
 
   useEffect(() => {
     if (!documentId) {
+      setProviders(null);
+      setIsReady(false);
       return;
     }
 
-    const yjsProviders = initializeYjsDocument(documentId);
+    let mounted = true;
+    let yjsProviders: YjsProviders | null = null;
 
-    // Wait for persistence to be ready
-    yjsProviders.persistence.once('synced', () => {
-      setIsReady(true);
-    });
+    try {
+      yjsProviders = initializeYjsDocument(documentId);
 
-    setProviders(yjsProviders);
+      // Wait for persistence to be ready
+      yjsProviders.persistence.once('synced', () => {
+        if (mounted) {
+          setIsReady(true);
+        }
+      });
+
+      if (mounted) {
+        setProviders(yjsProviders);
+      }
+    } catch (error) {
+      console.error('Failed to initialize Yjs document:', error);
+    }
 
     return () => {
-      cleanupYjsDocument(yjsProviders);
+      mounted = false;
+      if (yjsProviders) {
+        // Cleanup in next tick to avoid race conditions
+        setTimeout(() => {
+          if (yjsProviders) {
+            cleanupYjsDocument(yjsProviders);
+          }
+        }, 0);
+      }
     };
   }, [documentId]);
 

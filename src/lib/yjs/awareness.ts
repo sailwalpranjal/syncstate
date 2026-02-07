@@ -18,7 +18,14 @@ export function getUserPresences(awareness: Awareness): UserPresence[] {
   const presences: UserPresence[] = [];
 
   awareness.getStates().forEach((state, clientId) => {
-    if (state.user && clientId !== awareness.clientID) {
+    // Only add presences with valid user data
+    if (
+      state.user &&
+      clientId !== awareness.clientID &&
+      state.user.userId &&
+      state.user.userName &&
+      state.user.userColor
+    ) {
       presences.push({
         userId: state.user.userId,
         userName: state.user.userName,

@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import { ClerkProvider } from '@clerk/nextjs';
 import { Toaster } from 'react-hot-toast';
-import { ErrorBoundary } from '@/components/ui/error-boundary';
 import { ThemeProvider } from '@/components/ui/theme-provider';
 import "./globals.css";
 
@@ -28,31 +27,29 @@ export default function RootLayout({
             enableSystem
             disableTransitionOnChange={false}
           >
-            <ErrorBoundary>
-              {children}
-              <Toaster
-                position="bottom-right"
-                toastOptions={{
-                  duration: 4000,
-                  style: {
-                    background: '#333',
-                    color: '#fff',
+            {children}
+            <Toaster
+              position="bottom-right"
+              toastOptions={{
+                duration: 4000,
+                style: {
+                  background: '#333',
+                  color: '#fff',
+                },
+                success: {
+                  iconTheme: {
+                    primary: '#10B981',
+                    secondary: '#fff',
                   },
-                  success: {
-                    iconTheme: {
-                      primary: '#10B981',
-                      secondary: '#fff',
-                    },
+                },
+                error: {
+                  iconTheme: {
+                    primary: '#EF4444',
+                    secondary: '#fff',
                   },
-                  error: {
-                    iconTheme: {
-                      primary: '#EF4444',
-                      secondary: '#fff',
-                    },
-                  },
-                }}
-              />
-            </ErrorBoundary>
+                },
+              }}
+            />
           </ThemeProvider>
         </body>
       </html>

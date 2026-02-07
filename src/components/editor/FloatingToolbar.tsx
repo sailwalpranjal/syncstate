@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { Editor } from '@tiptap/react';
 import {
   Bold,
@@ -9,6 +9,7 @@ import {
   Code,
   Link as LinkIcon,
   Highlighter,
+  GripVertical,
 } from 'lucide-react';
 
 interface FloatingToolbarProps {
@@ -18,6 +19,9 @@ interface FloatingToolbarProps {
 export function FloatingToolbar({ editor }: FloatingToolbarProps) {
   const [isVisible, setIsVisible] = useState(false);
   const [position, setPosition] = useState({ top: 0, left: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+  const toolbarRef = useRef<HTMLDivElement>(null);
 
   const updatePosition = useCallback(() => {
     if (!editor) return;
@@ -39,14 +43,14 @@ export function FloatingToolbar({ editor }: FloatingToolbarProps) {
     const centerX = (start.left + end.left) / 2;
     const topY = start.top;
 
-    // Position toolbar above selection with offset
+    // Position toolbar above selection with offset (including drag offset)
     setPosition({
-      top: topY - 60, // 60px above selection
-      left: centerX,
+      top: topY - 60 + dragOffset.y, // 60px above selection + drag offset
+      left: centerX + dragOffset.x,
     });
 
     setIsVisible(true);
-  }, [editor]);
+  }, [editor, dragOffset]);
 
   useEffect(() => {
     if (!editor) return;
@@ -79,12 +83,44 @@ export function FloatingToolbar({ editor }: FloatingToolbarProps) {
     };
   }, [editor, updatePosition]);
 
+  // Handle dragging
+  useEffect(() => {
+    if (!isDragging) return;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!toolbarRef.current) return;
+
+      setDragOffset((prev) => ({
+        x: prev.x + e.movementX,
+        y: prev.y + e.movementY,
+      }));
+    };
+
+    const handleMouseUp = () => {
+      setIsDragging(false);
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isDragging]);
+
+  const handleDragStart = (e: React.MouseEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
   if (!editor || !isVisible) {
     return null;
   }
 
   return (
     <div
+      ref={toolbarRef}
       className="fixed z-50 flex items-center gap-1 bg-gray-900 dark:bg-gray-800 text-white rounded-lg shadow-xl border border-gray-700 p-1 transition-opacity"
       style={{
         top: `${position.top}px`,
@@ -92,8 +128,21 @@ export function FloatingToolbar({ editor }: FloatingToolbarProps) {
         transform: 'translateX(-50%)',
         opacity: isVisible ? 1 : 0,
         pointerEvents: isVisible ? 'auto' : 'none',
+        cursor: isDragging ? 'grabbing' : 'default',
       }}
     >
+      {/* Drag Handle */}
+      <div
+        onMouseDown={handleDragStart}
+        className="p-2 cursor-grab active:cursor-grabbing hover:bg-gray-700 rounded transition-colors"
+        title="Drag to move toolbar"
+      >
+        <GripVertical className="w-4 h-4" />
+      </div>
+
+      {/* Divider */}
+      <div className="w-px h-6 bg-gray-600" />
+
       {/* Bold */}
       <button
         onClick={() => editor.chain().focus().toggleBold().run()}
