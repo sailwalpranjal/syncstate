@@ -6,7 +6,8 @@
     "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "test": "vitest run"
   },
   "dependencies": {
     "@clerk/nextjs": "^6.37.3",
@@ -64,5 +65,9 @@
     "y-websocket": "^3.0.0",
     "yjs": "^13.6.29",
     "zustand": "^5.0.11"
+  },
+  "devDependencies": {
+    "fast-check": "^3.23.2",
+    "vitest": "^2.1.9"
   }
 }

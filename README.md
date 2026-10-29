@@ -1,387 +1,107 @@
 # SyncState
 
-A production-grade, offline-first collaborative document editor powered by CRDTs (Conflict-free Replicated Data Types). Write together in real-time, even when offline, with a beautiful and responsive interface.
+[![tests](https://github.com/sailwalpranjal/syncstate/actions/workflows/ci.yml/badge.svg)](https://github.com/sailwalpranjal/syncstate/actions/workflows/ci.yml)
+[![licence: MIT](https://img.shields.io/badge/licence-MIT-blue.svg)](LICENSE)
 
-## 🚀 Quick Start
+A collaborative document editor where the content lives in the browsers and merges by itself. You can keep typing offline; when you reconnect, your edits and everyone else's end up in the same document without a conflict dialog. Built on Yjs CRDTs, TipTap, WebRTC and IndexedDB.
+
+**Live:** [syncstate.vercel.app](https://syncstate.vercel.app)
+
+## Who it is for, and the problem
+
+It is for a small group editing one document, where at least one person is sometimes offline. The usual model (a server holds the truth, you get a conflict if you diverge) loses work or interrupts people. I built this to see how far the other model goes: content on the clients, merging by CRDT. I have no usage data and I have not interviewed users, so treat "who it is for" as a hypothesis. The only users so far have been me and two browser windows.
+
+## Demo
+
+> Screenshot placeholder. To capture the interesting part: open the live site in two browser windows signed in as different users, put the same document in both, and take a 1440x900 screenshot with both cursors visible. Save as `docs/img/editor.png`. For a GIF: in DevTools set one window to Offline, type in both for about 5 seconds, set it back to Online, and record the texts merging with ScreenToGif at 12 fps. Save as `docs/img/offline-merge.gif`.
+
+## Quick start
 
 ```bash
-# 1. Install dependencies
 npm install
-
-# 2. Set up your .env.local with Supabase and Clerk keys
-# Copy .env.example to .env.local and fill in your credentials
-
-# 3. Run the Supabase schema
-# Copy supabase-schema.sql into Supabase SQL Editor and execute
-
-# 4. (Optional) Enable version history
-# Copy supabase-versions-table.sql into Supabase SQL Editor and execute
-
-# 5. Start the dev server
-npm run dev
+cp .env.example .env.local     # fill in the Clerk and Supabase keys
+npm run dev                    # http://localhost:3000
+npm test                       # 34 tests, about 3 seconds
 ```
 
-Then visit `http://localhost:3000` and start collaborating!
+You need a Clerk application and a Supabase project. Run `supabase-schema.sql` in the Supabase SQL editor, and `supabase-versions-table.sql` if you want version history.
 
-## ✨ Features
+## How it works
 
-### Core Collaboration
-- **Real-Time Collaboration**: See edits and cursors from other users instantly with color-coded presence
-- **Offline-First**: Keep working without internet, auto-sync when back online via IndexedDB persistence
-- **CRDT-Powered**: Automatic conflict resolution using Yjs - no merge conflicts ever
-- **Rich Text Editing**: Full-featured TipTap editor with comprehensive formatting options
-- **WebRTC P2P**: Direct peer-to-peer synchronization for ultra-low latency
-- **User Presence**: Real-time indicators showing who's actively editing with colored cursors
+```
+ browser A                          browser B
+ TipTap editor                      TipTap editor
+     |                                  |
+ Yjs document  <---- WebRTC ---->  Yjs document
+     |        (peers find each other      |
+ IndexedDB     via a signalling server)  IndexedDB
 
-### Rich Text Editor Features
-- **Text Formatting**: Bold, Italic, Underline, Strikethrough
-- **Headings**: H1, H2, H3 with proper hierarchy
-- **Text Colors**: 7-color palette for text customization
-- **Highlighting**: 6 pastel highlight colors
-- **Text Alignment**: Left, Center, Right, Justify
-- **Lists**: Bulleted and numbered lists
-- **Code Blocks**: Syntax highlighting with Lowlight
-- **Tables**: Resizable tables with header rows
-- **Images**: Inline images with Base64 support
-- **Links**: Interactive hyperlinks
-- **Blockquotes**: Styled quote blocks
-- **Floating Toolbar**: Context-aware toolbar that appears on text selection (draggable!)
-- **Sticky Main Toolbar**: Toolbar stays visible while scrolling
+ Supabase: document titles, owners, collaborators, version snapshots
+ Clerk:    sign-in; /dashboard and /editor are protected by middleware
+```
 
-### User Experience
-- **Beautiful UI**: Professional design system with smooth animations and transitions (Framer Motion)
-- **Responsive Design**: Works perfectly on mobile, tablet, and desktop
-- **Dark/Light Mode**: Full theme support with smooth transitions
-- **Document Management**: Create, search, view, and delete documents with intuitive interface
-- **Export Options**: Export documents as PDF, HTML, Markdown, or Plain Text
-- **Custom Document Names**: Name your documents with helpful suggestions
-- **Grid & List Views**: Toggle between grid and list layouts for document browsing
-- **Keyboard Shortcuts**: Comprehensive keyboard shortcuts for power users
+Every edit is a Yjs update. Updates can arrive in any order, more than once, and still produce the same document. That property is what the app depends on, and it is what the tests check. Outgoing updates are merged in 50 ms windows (`src/lib/yjs/batching.ts`).
 
-### Advanced Features
-- **Version History**: Automatic versioning with 3D visualization (geodesic paths)
-- **Connection Status**: Real-time P2P connection and peer count indicators
-- **Active Users Display**: See who's currently editing the document
-- **Auto-Save**: Automatic saving with visual feedback
-- **Professional Landing Page**: Stunning hero section with feature highlights
+## Evidence
 
-### Landing Page
-<!-- ![Landing Page](screenshots/landing.png) -->
-_Beautiful hero section with feature highlights and call-to-action_
+`npm test` runs 34 tests with vitest and fast-check:
 
-### Dashboard
-<!-- ![Dashboard](screenshots/dashboard.png) -->
-_Grid and list views for document management with search and filters_
+- Two or three authors edit offline; their updates are replayed in different orders on fresh replicas, and the documents (text, array, map and state vector) must be identical. Includes concurrent inserts at the same index, delete versus insert inside the deleted range, and conflicting map writes.
+- Property tests: 200 random concurrent edit histories delivered in two random orders, 100 delivered twice, 100 synced pairwise through state vectors.
+- A negative control, so the comparisons can fail: a replica that misses one update must not match.
+- The 50 ms batcher: merged updates reproduce the source document; flush and destroy; origin filtering.
+- Presence helpers: stable colour per user, self excluded, incomplete records skipped.
 
-### Collaborative Editor
-<!-- ![Editor](screenshots/editor.png) -->
-_Rich text editor with real-time collaboration and user presence_
+CI runs the tests and `tsc --noEmit` on Node 20 and 22. The tests cover the CRDT layer and the helpers around it. They do not drive a browser; an end-to-end offline test is on the roadmap.
 
-### Floating Toolbar
-<!-- ![Floating Toolbar](screenshots/toolbar.png) -->
-_Context-aware toolbar with draggable functionality_
+## Limits and known gaps
 
-### Version Visualization
-<!-- ![Version History](screenshots/versions.png) -->
-_3D geodesic visualization of document version history_
+- **No server copy of live content.** If every peer is offline and browser storage is cleared, the document is gone.
+- **Public signalling server by default** (`wss://signaling.yjs.dev`). It sees connection metadata, not content. Run your own for anything real.
+- **Provider-origin updates are dropped by the batcher** when batching is on (`observeDocumentChanges`). A test records the behaviour; whether anything depends on it is an open question.
+- **Console noise suppressed.** `src/lib/yjs/provider.ts` hides WebSocket errors and clears the console. It should be removed.
+- **"No merge conflicts" has limits.** The text always converges, but convergence is not intent: two people rewriting the same sentence get both rewrites interleaved. For simple properties the last write wins.
+- **Performance targets** (Lighthouse 95+, sub-millisecond CRDT operations, sub-500 ms WebRTC connection) are targets. I have not measured them.
 
-## 🛠️ Tech Stack
+## Roadmap and product thinking
 
-- **Framework**: Next.js 15 (App Router with Turbopack), React 19, TypeScript
-- **CRDT Engine**: Yjs with WebRTC and IndexedDB providers for offline-first sync
-- **Rich Text Editor**: TipTap v2.10.3 with collaboration extensions
-- **Authentication**: Clerk (secure user management)
-- **Database**: Supabase PostgreSQL (metadata only, not document content)
-- **Styling**: Tailwind CSS v3 with custom design tokens
-- **Animations**: Framer Motion for smooth transitions and interactions
-- **3D Visualization**: Three.js, @react-three/fiber, @react-three/drei
-- **Export**: jsPDF + html2canvas for document export
-- **Icons**: Lucide React
+- [Roadmap](docs/product/ROADMAP.md) (Now / Next / Later with RICE and ICE arithmetic)
+- [PRD](docs/product/PRD.md), [decision log](docs/product/DECISIONS.md), [metrics plan](docs/product/METRICS.md)
+- [Changelog](CHANGELOG.md), [project board setup](docs/project-board.md), [issue drafts](docs/issues/)
 
-## Getting Started
+Features that exist today: rich text (headings, lists, tables, code blocks with highlighting, images, links, colours, alignment), presence with coloured cursors, automatic version snapshots with a 3D view, export to PDF, HTML, Markdown and plain text, dark and light themes, document templates, keyboard shortcuts.
 
-### Prerequisites
+Not built yet: comments, mentions, public share links, folders, full-text search, a mobile app.
 
-- Node.js 18+ and npm
-- A Supabase account and project
-- A Clerk account and application
+## Tech stack
 
-### Installation
+Next.js 15 (App Router), React 19, TypeScript; Yjs with `y-webrtc`, `y-websocket` and `y-indexeddb`; TipTap 2; Clerk; Supabase (Postgres); Tailwind CSS 3; Framer Motion; Three.js with react-three-fiber; jsPDF and html2canvas; vitest and fast-check for tests.
 
-1. **Clone the repository**
-   ```bash
-   git clone <your-repo-url>
-   cd syncstate
-   ```
+## Configuration
 
-2. **Install dependencies**
-   ```bash
-   npm install
-   ```
-
-3. **Set up environment variables**
-
-   Create a `.env.local` file in the root directory:
-   ```bash
-   # Supabase (for user metadata only)
-   NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
-   NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
-
-   # Clerk Authentication
-   NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=your_clerk_publishable_key
-   CLERK_SECRET_KEY=your_clerk_secret_key
-
-   # Yjs Signaling Server
-   NEXT_PUBLIC_YJS_SIGNALING_SERVER=wss://signaling.yjs.dev
-   ```
-
-4. **Set up Supabase database**
-
-   Run these SQL scripts in your Supabase SQL Editor (in order):
-
-   a. **Main schema** - Creates tables and disables RLS for Clerk compatibility:
-   ```bash
-   # Copy contents of supabase-schema.sql and execute
-   ```
-
-   b. **Version tracking** (Optional) - Adds version history support:
-   ```bash
-   # Copy contents of supabase-disable-rls-versions.sql and execute
-   ```
-
-   **Important**: This app uses Clerk for authentication, not Supabase Auth. The RLS (Row Level Security) policies are disabled to ensure compatibility with Clerk's JWT structure.
-
-5. **Run the development server**
-   ```bash
-   npm run dev
-   ```
-
-   Open [http://localhost:3000](http://localhost:3000) to see the application.
-
-### Building for Production
+`.env.local`:
 
 ```bash
-npm run build
-npm start
+NEXT_PUBLIC_SUPABASE_URL=
+NEXT_PUBLIC_SUPABASE_ANON_KEY=
+NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=
+CLERK_SECRET_KEY=
+NEXT_PUBLIC_YJS_SIGNALING_SERVER=wss://signaling.yjs.dev   # use your own for real use
 ```
 
-## How It Works
-
-### Architecture
-
-SyncState uses a distributed architecture where document content is stored entirely on the client using CRDTs:
-
-1. **Document Storage**:
-   - Content: Stored in browser IndexedDB via Yjs
-   - Metadata: Stored in Supabase (title, owner, permissions)
-
-2. **Synchronization**:
-   - Primary: WebRTC peer-to-peer (up to 20 simultaneous peers)
-   - Fallback: WebSocket via signaling server
-   - Offline: Changes saved locally, synced when online
-
-3. **Conflict Resolution**:
-   - Automatic via Yjs CRDT operations
-   - No manual merge conflicts
-   - Last-write-wins for simple properties
-
-### Key Components
-
-- **Yjs Provider** (`lib/yjs/provider.ts`): Manages CRDT document and synchronization
-- **Collaborative Editor** (`components/editor/CollaborativeEditor.tsx`): TipTap editor with Yjs bindings
-- **Presence System** (`lib/yjs/awareness.ts`): User cursors and activity indicators
-- **Hooks**: React hooks for document state, collaboration, and presence
-
-## Project Structure
-
-```
-syncstate/
-├── src/
-│   ├── app/                    # Next.js App Router pages
-│   │   ├── dashboard/          # Document list
-│   │   ├── editor/[id]/        # Collaborative editor
-│   │   └── page.tsx            # Landing page
-│   ├── components/
-│   │   ├── editor/             # Editor components
-│   │   ├── dashboard/          # Dashboard components
-│   │   └── ui/                 # Reusable UI components
-│   ├── lib/
-│   │   ├── yjs/                # CRDT infrastructure
-│   │   ├── supabase/           # Database client
-│   │   └── utils/              # Utility functions
-│   ├── hooks/                  # React hooks
-│   ├── stores/                 # State management
-│   └── types/                  # TypeScript types
-├── public/                     # Static assets
-└── supabase-schema.sql         # Database schema
-```
-
-## Development
-
-### Code Quality
-
-- TypeScript strict mode enabled
-- ESLint for code linting
-- Prettier for code formatting (recommended)
-- Follows Vercel React best practices
-
-### Performance Targets
-
-- Lighthouse score: 95+ on all metrics
-- CRDT operation latency: <1ms
-- WebRTC connection time: <500ms
-- Bundle size: <300KB initial load
-
-## 🗺️ Roadmap
-
-### ✅ Completed
-- [x] Real-time collaborative editing with TipTap
-- [x] User presence with colored cursors
-- [x] Offline-first architecture (IndexedDB persistence)
-- [x] Complete document management (CRUD operations)
-- [x] Beautiful responsive UI with animations
-- [x] Dark/light mode toggle
-- [x] Version history and auto-versioning
-- [x] 3D version tree visualization with geodesic paths
-- [x] Export to PDF, HTML, Markdown, and Plain Text
-- [x] Keyboard shortcuts system
-- [x] Search and filter documents
-- [x] Grid and list view modes
-- [x] Custom document naming with modal
-- [x] Professional landing page
-- [x] Complete text formatting (Bold, Italic, Underline, Strikethrough)
-- [x] Text color picker with 7 colors
-- [x] Text highlighting with 6 pastel colors
-- [x] Text alignment (Left, Center, Right, Justify)
-- [x] Draggable floating toolbar
-- [x] Sticky main toolbar on scroll
-- [x] Mobile responsive design
-- [x] Document templates
-
-### 🚧 Future Enhancements
-- [ ] Comment and annotation system
-- [ ] Inline commenting on text selections
-- [ ] @mention notifications
-
-- [ ] Mobile app (React Native)
-- [ ] Real-time notifications
-- [ ] Document sharing via public links
-- [ ] Advanced permissions management
-- [ ] Document folders and organization
-- [ ] Full-text search across all documents
+To run your own signalling server: `HOST=0.0.0.0 PORT=4444 npx y-websocket`, deploy it somewhere, and point `NEXT_PUBLIC_YJS_SIGNALING_SERVER` at it.
 
 ## Troubleshooting
 
-### Common Issues
+- **WebSocket connection errors** to the signalling server mean peers cannot find each other; local editing and IndexedDB persistence still work. Run your own signalling server.
+- **401 or 406 from `document_versions`** usually means the table is missing. Run `supabase-versions-table.sql`.
+- **Duplicate Yjs room errors in development**: React Strict Mode is disabled on purpose.
+- **Stuck local state**: DevTools, Application, IndexedDB, delete the database for the document.
 
-**WebSocket Connection Errors**
-```
-WebSocket connection to 'wss://signaling.yjs.dev/' failed
-```
-- These are harmless! The app works in offline-first mode
-- The public signaling server may be rate-limiting connections
-- For production, set up your own Y.js signaling server
-- Filter console: Type `-websocket` in DevTools console filter
+## Deploying
 
-**Supabase 401/406 Errors on document_versions**
-- Make sure you ran `supabase-disable-rls-versions.sql` to disable RLS
-- Verify RLS is disabled: Run `SELECT tablename, rowsecurity FROM pg_tables WHERE tablename = 'document_versions';`
-- Result should show `rowsecurity = false`
+Vercel works with no build changes. Set the environment variables above in the project settings.
 
-**Text Not Showing in PDF Exports**
-- Already fixed! PDF exports now force black text on white background
-- If issues persist, check browser console for html2canvas errors
+## Licence
 
-**Color Picker Not Working**
-- Fixed in latest version with proper fixed positioning
-- Clear browser cache and reload if using older version
-
-**App Keeps Rebuilding (Fast Refresh)**
-- React Strict Mode is disabled to prevent Yjs duplicate room errors
-- This is intentional for Yjs compatibility
-
-### Getting Help
-
-If you encounter issues:
-1. Check the browser console for specific error messages
-2. Verify all environment variables are set correctly
-3. Ensure Supabase tables are created with RLS disabled
-4. Try clearing IndexedDB: DevTools → Application → IndexedDB → Delete
-
-## Deployment
-
-### Deploying to Vercel
-
-1. **Push to GitHub**
-   ```bash
-   git add .
-   git commit -m "Initial commit"
-   git push origin main
-   ```
-
-2. **Deploy to Vercel**
-   - Import your GitHub repository in Vercel
-   - Add environment variables in Vercel dashboard
-   - Deploy!
-
-3. **Set up Production Signaling Server** (Recommended)
-   ```bash
-   # Install y-websocket globally or in a separate project
-   npm install -g y-websocket
-
-   # Run signaling server (deploy to Railway, Render, or Fly.io)
-   HOST=0.0.0.0 PORT=4444 npx y-websocket
-
-   # Update your Vercel environment variable:
-   NEXT_PUBLIC_YJS_SIGNALING_SERVER=wss://your-signaling-server.com
-   ```
-
-### Environment Variables for Production
-
-Make sure to set these in your deployment platform:
-- `NEXT_PUBLIC_SUPABASE_URL`
-- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-- `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`
-- `CLERK_SECRET_KEY`
-- `NEXT_PUBLIC_YJS_SIGNALING_SERVER` (use your own for production)
-
-## Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
-
-## License
-
-MIT License - feel free to use this project for learning or production.
-
-## Credits
-
-Built with:
-- [Next.js](https://nextjs.org/)
-- [Yjs](https://yjs.dev/)
-- [TipTap](https://tiptap.dev/)
-- [Clerk](https://clerk.com/)
-- [Supabase](https://supabase.com/)
-- [Tailwind CSS](https://tailwindcss.com/)
-
----
-
-**Note**: This is a demonstration project showcasing CRDT-based collaboration. For production use, consider adding:
-- End-to-end encryption
-- Rate limiting
-- Advanced access controls
-- Monitoring and analytics
-- Backup and disaster recovery
-
-## 👤 Author
-
-**Pranjal Sailwal**
-
-Built with passion to demonstrate the power of CRDTs and offline-first architecture in collaborative applications.
-
-## 🌟 Show Your Support
-
-Give a ⭐️ if this project helped you!
-
----
-
-© 2026 Pranjal Sailwal • Licensed under MIT
+MIT, see [LICENSE](LICENSE).
