@@ -82,7 +82,7 @@ export default function Home() {
             </p>
 
             <p className="text-lg text-gray-400 mb-12 max-w-2xl mx-auto animate-slide-up delay-200">
-              Built with cutting-edge CRDT technology for seamless collaboration across teams, devices, and continents.
+              Edits merge on their own, so people can write together online or off.
             </p>
 
             {/* CTA Buttons */}
@@ -173,7 +173,7 @@ export default function Home() {
             {/* Tech Stack */}
             <div className="mt-32 pt-16 border-t border-white/10">
               <p className="text-sm uppercase tracking-wider text-gray-500 mb-8">
-                Built with cutting-edge technology
+                Built with
               </p>
               <div className="flex flex-wrap items-center justify-center gap-8 text-sm text-gray-400">
                 <span className="font-semibold text-white">Next.js 15</span>
